@@ -285,3 +285,48 @@ class ListCustomerView(generics.ListAPIView):
             return Response({'error': 'Customer does not exist'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ReturnItemView(generics.UpdateAPIView):
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'sales_id'
+
+    def update(self, request, *args, **kwargs):
+        sales_id = kwargs.get('sales_id')
+        business_id = request.data.get('business_id')
+        invoice_id = request.data.get('invoice_id')
+        user = request.user
+
+        if not business_id:
+            return Response({'error': 'business_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        db_name = f'{business_id}{os.getenv("DB_NAME_SECONDARY")}'
+        add_database(db_name)
+
+        try:
+            invoice_item = InvoiceItem.objects.using(db_name).get(sales_id=sales_id, invoice_id=invoice_id)
+            invoice_item.return_status = True
+            invoice_item.save()
+            try:
+                quantity = invoice_item.quantity
+                price = invoice_item.price
+                transaction_amount = price * quantity
+
+                cash_book_data = {
+                    'business_id': business_id,
+                    'transaction_amount': transaction_amount,
+                    'transaction_type': 'expense',
+                    'description': f'Return item id {invoice_item.sales_id}',
+                    'created_by': str(user.user_id),
+                }
+                result = create_cash_book_entry(cash_book_data)
+
+                if result.status_code == 201:
+                    return Response({'Item Returned': invoice_id}, status=status.HTTP_201_CREATED)
+                else:
+                    return Response({'Error': result.text}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            except Exception as e:
+                return Response({'Error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except InvoiceItem.DoesNotExist:
+            return Response({'error': 'Invoice item does not exist'}, status=status.HTTP_400_BAD_REQUEST)
+
