@@ -9,7 +9,11 @@ from inventory.models import Category, Item
 
 class InvoiceSerializers(serializers.ModelSerializer):
     created_by = serializers.UUIDField()
-    customer = serializers.UUIDField()
+    customer = serializers.UUIDField(allow_null=True, required=False)
+    cheque_number = serializers.CharField(allow_null=True, required=False)
+    payee_name = serializers.CharField(allow_null=True, required=False)
+    due_date = serializers.DateField(allow_null=True, required=False)
+    card_number = serializers.CharField(allow_null=True, required=False)
 
     class Meta:
         model = Invoice
@@ -19,12 +23,21 @@ class InvoiceSerializers(serializers.ModelSerializer):
             'amount',
             'created_by',
             'invoice_status',
-            'customer'
+            'customer',
+            'payment_type',
+            'cheque_number',
+            'payee_name',
+            'due_date',
+            'card_number',
+            'checked_by',
+            'checked_on',
         ]
         read_only_fields = ['invoice_id']
 
     def validate_customer(self, value):
-        request = self.context
+        if value is None:
+            return None
+        request = self.context['request']
         business_id = request.data.get('business_id')
         if not business_id:
             raise serializers.ValidationError("No business id provided")
@@ -39,6 +52,18 @@ class InvoiceSerializers(serializers.ModelSerializer):
         except Exception as e:
             raise serializers.ValidationError(str(e))
         return customer
+
+    def validate_cheque_number(self, value):
+        return value or None
+
+    def validate_payee_name(self, value):
+        return value or None
+
+    def validate_due_date(self, value):
+        return value or None
+
+    def validate_card_number(self, value):
+        return value or None
 
 
 class InvoiceItemSerializers(serializers.ModelSerializer):

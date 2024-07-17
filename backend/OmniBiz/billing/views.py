@@ -42,12 +42,17 @@ class CreateBillView(generics.CreateAPIView):
             'amount': request.data.get('amount'),
             'created_by': str(user.user_id),
             'invoice_status': request.data.get('invoice_status'),
-            'customer': request.data.get('customer'),
+            'customer': request.data.get('customer') if request.data.get('customer') else None,
+            'payment_type': request.data.get('payment_type'),
+            'cheque_number': request.data.get('cheque_number') if request.data.get('cheque_number') else None,
+            'payee_name': request.data.get('payee_name') if request.data.get('payee_name') else None,
+            'due_date': request.data.get('due_date') if request.data.get('due_date') else None,
+            'card_number': request.data.get('card_number') if request.data.get('card_number') else None,
         }
 
         # Start transaction
         with transaction.atomic():
-            invoice_serializer = InvoiceSerializers(data=invoice_data, context=request)
+            invoice_serializer = InvoiceSerializers(data=invoice_data, context={'request': request})
             if invoice_serializer.is_valid():
                 invoice = Invoice.objects.using(db_name).create(**invoice_serializer.validated_data)
 
@@ -64,14 +69,13 @@ class CreateBillView(generics.CreateAPIView):
                     invoice_items = []
                     for item_data in invoice_items_data:
                         item_data['invoice'] = invoice.invoice_id
-                    invoice_item_serializer = InvoiceItemSerializers(data=invoice_items_data, many=True,
-                                                                     context=request)
+                    invoice_item_serializer = InvoiceItemSerializers(data=invoice_items_data, many=True, context=request)
                     if invoice_item_serializer.is_valid():
                         for item_data in invoice_item_serializer.validated_data:
                             invoice_item = InvoiceItem.objects.using(db_name).create(**item_data)
                             invoice_items_once = {
-                                'invoice': str(invoice_item.invoice),
-                                'item': invoice_item.item.name,
+                                'invoice': str(invoice_item.invoice.invoice_id),
+                                'item': invoice_item.item.name if invoice_item.item else None,
                                 'quantity': invoice_item.quantity,
                                 'price': str(invoice_item.price),
                             }
@@ -85,7 +89,7 @@ class CreateBillView(generics.CreateAPIView):
                         'invoice_amount': str(invoice.amount),
                         'payment': invoice.invoice_status,
                         'created_by': created_by.username,
-                        'customer': invoice.customer.name,
+                        'customer': invoice.customer.name if invoice.customer else None,
                         'invoice_items': invoice_items,
                     }
                     # Send WebSocket message synchronously

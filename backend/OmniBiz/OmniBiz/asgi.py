@@ -16,20 +16,15 @@ from channels.auth import AuthMiddlewareStack
 
 import billing.routing
 import notification.routing
-from Utils.Milddlewares.AuthMiddleware import JWTAuthMiddleware
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'OmniBiz.settings')
 
 application = ProtocolTypeRouter({
     'http': get_asgi_application(),
-    'websocket': AllowedHostsOriginValidator(
-        AuthMiddlewareStack(
-            JWTAuthMiddleware(
-                URLRouter(
-                    notification.routing.websocket_urlpatterns +
-                    billing.routing.websocket_urlpatterns
-                )
-            )
+    'websocket': AuthMiddlewareStack(
+        URLRouter(
+            notification.routing.websocket_urlpatterns +
+            billing.routing.websocket_urlpatterns
         )
-    ),
+    )
 })
