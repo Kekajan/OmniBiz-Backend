@@ -4,7 +4,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
 from Utils.Database.Database_Routing.add_database import add_database
-from inventory.models import Category, Item, Inventory
+from inventory.models import Category, Item, Inventory, InventoryItem
 from suppliers.models import Supplier
 
 
@@ -44,16 +44,37 @@ class ItemSerializer(serializers.ModelSerializer):
 
 # Corrected InventorySerializer
 class InventorySerializer(serializers.ModelSerializer):
-    category = serializers.UUIDField()
-    item = serializers.UUIDField()
     suppliers = serializers.UUIDField()
+    created_by = serializers.UUIDField()
 
     class Meta:
         model = Inventory
         fields = [
-            'item', 'category', 'quantity', 'buying_price', 'selling_price',
             'suppliers', 'created_by', 'created_at'
         ]
+
+    def validate_suppliers(self, value):
+        request = self.context.get("request")
+        business_id = request.data.get("business_id")
+        if not business_id:
+            raise serializers.ValidationError('No business id')
+
+        db_name = f"{business_id}{os.getenv('DB_NAME_SECONDARY')}"
+        try:
+            suppliers = Supplier.objects.using(db_name).get(supplier_id=value)
+        except Supplier.DoesNotExist:
+            raise serializers.ValidationError("Supplier does not exist in the specified business database.")
+
+        return suppliers
+
+
+class InventoryItemSerializer(serializers.ModelSerializer):
+    category = serializers.UUIDField()
+    item = serializers.UUIDField()
+
+    class Meta:
+        model = InventoryItem
+        fields = ['item', 'category', 'quantity', 'buying_price', 'selling_price']
 
     def validate_category(self, value):
         request = self.context.get("request")
@@ -82,17 +103,3 @@ class InventorySerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Item does not exist in the specified business database.")
 
         return item
-
-    def validate_suppliers(self, value):
-        request = self.context.get("request")
-        business_id = request.data.get("business_id")
-        if not business_id:
-            raise serializers.ValidationError('No business id')
-
-        db_name = f"{business_id}{os.getenv('DB_NAME_SECONDARY')}"
-        try:
-            suppliers = Supplier.objects.using(db_name).get(supplier_id=value)
-        except Supplier.DoesNotExist:
-            raise serializers.ValidationError("Supplier does not exist in the specified business database.")
-
-        return suppliers

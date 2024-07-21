@@ -6,9 +6,9 @@ from rest_framework.permissions import IsAuthenticated
 
 from Utils.Database.Database_Routing.add_database import add_database
 from cash_book.views import create_cash_book_entry
-from inventory.serializers import CategorySerializer, ItemSerializer, InventorySerializer
+from inventory.serializers import CategorySerializer, ItemSerializer, InventorySerializer, InventoryItemSerializer
 from rest_framework.response import Response
-from inventory.models import Category, Item, Inventory
+from inventory.models import Category, Item, Inventory, InventoryItem
 from datetime import datetime
 
 
@@ -218,38 +218,46 @@ class CreateInventoryView(generics.CreateAPIView):
         db_name = f"{business_id}{os.getenv('DB_NAME_SECONDARY')}"
         add_database(db_name)
 
-        inventory_data = {
-            'item': int(request.data.get('item')),
-            'category': int(request.data.get('category')),
-            'quantity': request.data.get('quantity'),
-            'buying_price': request.data.get('buying_price'),
-            'selling_price': request.data.get('selling_price'),
+        inventory = {
             'suppliers': request.data.get('suppliers'),
-            'created_by': str(user.user_id),
+            'created_by': user.user_id,
             'created_at': datetime.now(),
         }
-
-        serializer = self.get_serializer(data=inventory_data, context={'request': request})
-        serializer.is_valid(raise_exception=True)
-
-        try:
-            inventory = Inventory.objects.using(db_name).create(**serializer.validated_data)
-            change_stock_quantity_status = change_stock_quantity('increase', business_id, inventory.item_id, inventory.quantity)
-            cash_book_data = {
-                'business_id': business_id,
-                'transaction_amount': inventory.quantity * inventory.buying_price,
-                'transaction_type': 'expense',
-                'description': f'buying Inventory {inventory.inventory_id}',
-                'created_by': str(user.user_id),
-            }
-            cash_book_response = create_cash_book_entry(cash_book_data)
-            if change_stock_quantity_status and cash_book_response.status_code == 201:
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+        total_amount = 0
+        inventory_serializer = InventorySerializer(data=inventory, context={'request': request})
+        if inventory_serializer.is_valid():
+            inventory = Inventory.objects.using(db_name).create(**inventory_serializer.validated_data)
+            if inventory:
+                inventory_items = request.data.get('inventory_items')
+                if inventory_items:
+                    for item in inventory_items:
+                        inventory_item_serializer = InventoryItemSerializer(data=item, context={'request': request})
+                        if inventory_item_serializer.is_valid():
+                            inventory_item = InventoryItem.objects.using(db_name).create(
+                                **inventory_item_serializer.validated_data)
+                            total_amount += (inventory_item.buying_price * inventory_item.quantity)
+                            change_stock_quantity('increase', business_id, inventory_item.item_id, inventory_item.quantity)
+                        else:
+                            return Response({"error": str(inventory_item_serializer.errors)},
+                                            status=status.HTTP_400_BAD_REQUEST)
+                    cash_book_data = {
+                        'business_id': business_id,
+                        'transaction_amount': total_amount,
+                        'transaction_type': 'expense',
+                        'description': f'Inventory Bu {inventory.inventory_id}',
+                        'created_by': str(user.user_id),
+                    }
+                    cash_book_entry_status = create_cash_book_entry(cash_book_data)
+                    if cash_book_entry_status.status_code == 201:
+                        return Response(inventory_serializer.data, status=status.HTTP_200_OK)
+                    else:
+                        return Response({"error While cashbook entry with status code": str(cash_book_entry_status)},)
+                else:
+                    return Response({"error": "Inventory Item does not exist"}, status=status.HTTP_400_BAD_REQUEST)
             else:
-                inventory.delete()
-                return Response(serializer.data, status=status.HTTP_204_NO_CONTENT)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response({"error": "Inventory Item does not exist"}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"error": inventory_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class InventoryListView(generics.ListAPIView):
