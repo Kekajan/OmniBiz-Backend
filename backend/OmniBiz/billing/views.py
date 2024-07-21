@@ -19,6 +19,8 @@ from billing.serializers import InvoiceSerializers, InvoiceItemSerializers, Cust
 from cash_book.views import create_cash_book_entry
 from django.http import JsonResponse
 
+from inventory.views import change_stock_quantity
+
 logger = logging.getLogger(__name__)
 
 
@@ -80,6 +82,7 @@ class CreateBillView(generics.CreateAPIView):
                                 'price': str(invoice_item.price),
                             }
                             invoice_items.append(invoice_items_once)
+                            change_stock_quantity("decrease", business_id, invoice_item.item_id, invoice_item.quantity)
                     else:
                         return Response(invoice_item_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                     add_database(os.getenv('DB_NAME_PRIMARY'))
