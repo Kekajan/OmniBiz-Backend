@@ -231,7 +231,15 @@ class CreateInventoryView(generics.CreateAPIView):
                 inventory_items = request.data.get('inventory_items')
                 if inventory_items:
                     for item in inventory_items:
-                        inventory_item_serializer = InventoryItemSerializer(data=item, context={'request': request})
+                        item_data = {
+                            'item': item.get('item'),
+                            'inventory': inventory.inventory_id,
+                            'category': item.get('category'),
+                            'quantity': item.get('quantity'),
+                            'buying_price': item.get('buying_price'),
+                            'selling_price': item.get('selling_price')
+                        }
+                        inventory_item_serializer = InventoryItemSerializer(data=item_data, context={'request': request})
                         if inventory_item_serializer.is_valid():
                             inventory_item = InventoryItem.objects.using(db_name).create(
                                 **inventory_item_serializer.validated_data)
@@ -268,13 +276,29 @@ class InventoryListView(generics.ListAPIView):
         business_id = kwargs.get('business_id')
         if not business_id:
             return Response({"error": "business_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
         db_name = f"{business_id}{os.getenv('DB_NAME_SECONDARY')}"
         add_database(db_name)
 
+        inventory_data = []
+
         try:
             inventories = Inventory.objects.using(db_name).all()
-            serializer = InventorySerializer(inventories, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            for inventory in inventories:
+                inventory_items = InventoryItem.objects.using(db_name).filter(inventory=inventory.inventory_id)
+                inventory_items_data = []
+                for item in inventory_items:
+                    item_serializer = InventoryItemSerializer(item)
+                    inventory_items_data.append(item_serializer.data)
+                individual_inventory = {
+                    'inventory_id': inventory.inventory_id,
+                    'supplier': inventory.suppliers.supplier_name,
+                    'created_by': inventory.created_by,
+                    'created_at': inventory.created_at,
+                    'inventory_items': inventory_items_data
+                }
+                inventory_data.append(individual_inventory)
+            return Response(inventory_data, status=status.HTTP_200_OK)
         except Inventory.DoesNotExist:
             return Response({"error": "Inventory does not exist"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:

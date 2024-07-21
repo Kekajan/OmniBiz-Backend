@@ -71,10 +71,11 @@ class InventorySerializer(serializers.ModelSerializer):
 class InventoryItemSerializer(serializers.ModelSerializer):
     category = serializers.UUIDField()
     item = serializers.UUIDField()
+    inventory = serializers.UUIDField()
 
     class Meta:
         model = InventoryItem
-        fields = ['item', 'category', 'quantity', 'buying_price', 'selling_price']
+        fields = ['item', 'inventory', 'category', 'quantity', 'buying_price', 'selling_price']
 
     def validate_category(self, value):
         request = self.context.get("request")
@@ -101,5 +102,16 @@ class InventoryItemSerializer(serializers.ModelSerializer):
             item = Item.objects.using(db_name).get(item_id=value)
         except Item.DoesNotExist:
             raise serializers.ValidationError("Item does not exist in the specified business database.")
-
         return item
+
+    def validate_inventory(self, value):
+        request = self.context.get("request")
+        business_id = request.data.get("business_id")
+        if not business_id:
+            raise serializers.ValidationError('No business id')
+        db_name = f"{business_id}{os.getenv('DB_NAME_SECONDARY')}"
+        try:
+            inventory = Inventory.objects.using(db_name).get(inventory_id=value)
+        except Item.DoesNotExist:
+            raise serializers.ValidationError("Item does not exist in the specified business database.")
+        return inventory

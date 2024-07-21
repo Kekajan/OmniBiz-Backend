@@ -54,6 +54,7 @@ class Inventory(models.Model):
 
 class InventoryItem(models.Model):
     inventory_item_id = models.AutoField(primary_key=True)
+    inventory = models.ForeignKey(Inventory, on_delete=models.CASCADE, null=True)
     item = models.ForeignKey(Item, on_delete=models.CASCADE)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     quantity = models.IntegerField(default=0)
