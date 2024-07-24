@@ -7,7 +7,7 @@ from Utils.Common.email_or_username import email_to_username
 from django.shortcuts import get_object_or_404
 
 from django.contrib.auth import authenticate
-from rest_framework import generics, status
+from rest_framework import generics, status, permissions
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from Utils.Core.permissions import IsOwner, IsAdmin, IsHigherStaff
@@ -240,3 +240,10 @@ class CreateHigherStaffView(generics.UpdateAPIView):
 
     def perform_update(self, serializer):
         serializer.save()
+
+
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args):
+        return Response({"message": "successfully logout"}, status=status.HTTP_204_NO_CONTENT)

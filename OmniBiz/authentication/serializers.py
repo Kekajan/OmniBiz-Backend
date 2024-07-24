@@ -2,6 +2,8 @@ import os
 import secrets
 
 from django.db import transaction
+from rest_framework_simplejwt.tokens import RefreshToken, TokenError
+from django.utils.text import gettext_lazy as _
 
 from Utils.Database.Database_Routing.add_database import add_database
 from authentication.models import User, StaffAccess, HigherStaffAccess, HigherStaffUser

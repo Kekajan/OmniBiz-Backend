@@ -11,7 +11,7 @@ from authentication.views import (CreateUserView,
                                   OwnerAction,
                                   AdminAction,
                                   StaffAction,
-                                  CreateHigherStaffView,
+                                  CreateHigherStaffView, LogoutView,
                                   )
 
 urlpatterns = [
@@ -27,5 +27,6 @@ urlpatterns = [
     path('owner-action/<str:user_id>', OwnerAction.as_view(), name='owner-action'),
     path('admin-action', AdminAction.as_view(), name='owner-action'),
     path('staff-action', StaffAction.as_view(), name='owner-action'),
+    path('logout', LogoutView.as_view(), name='logout'),
 
 ]
