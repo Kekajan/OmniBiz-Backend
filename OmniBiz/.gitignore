@@ -43,22 +43,11 @@ staticfiles/
 # PyCharm
 .idea/
 
-# VS Code
-.vscode/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# macOS
-.DS_Store
 
 # Windows
 Thumbs.db
 ehthumbs.db
 
-# Virtual environment
-venv/
-ENV/
 
 # Node modules
 node_modules/
