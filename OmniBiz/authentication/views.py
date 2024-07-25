@@ -243,7 +243,13 @@ class CreateHigherStaffView(generics.UpdateAPIView):
 
 
 class LogoutView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = (IsAuthenticated,)
 
-    def post(self, request, *args):
-        return Response({"message": "successfully logout"}, status=status.HTTP_204_NO_CONTENT)
+    def post(self, request):
+        try:
+            refresh_token = request.data["refresh_token"]
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response({'error': 'successfully logout'}, status=status.HTTP_205_RESET_CONTENT)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
