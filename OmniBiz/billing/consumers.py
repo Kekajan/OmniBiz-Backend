@@ -2,6 +2,7 @@ import json
 import logging
 import os
 
+from channels.exceptions import DenyConnection
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.db import close_old_connections, connections
@@ -14,14 +15,13 @@ class InvoiceConsumer(AsyncWebsocketConsumer):
         self.business_id = self.scope['url_route']['kwargs']['business_id']
         self.group_name = f'business_{self.business_id}'
         user = self.scope["user"]
-        logging.info(f'{user} connected to business {self.business_id}')
 
         if not user.is_authenticated:
             from Utils.Common.is_user_in_business import is_user_in_business
             is_allow = is_user_in_business(user, self.business_id)
             if not is_allow:
                 self.close()
-                return False
+                raise DenyConnection("Unauthenticated user")
 
         # Connect to the business-specific database
         await self.connect_to_business_db()
