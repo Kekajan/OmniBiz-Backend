@@ -1,6 +1,6 @@
-# myapp/database_router.py
 class DatabaseRouter:
-    default_db_apps = {'auth', "authentication", "business", "owner", "notification", "daily_revenue", "super", 'contenttypes', 'admin'}
+    default_db_apps = {'auth', "authentication", "business", "owner", "notification", "daily_revenue", "super",
+                       'contenttypes', 'admin', 'token_blacklist'}
     dynamic_db_apps = {"staff", "inventory", "billing", "performance", "suppliers", "cash_book"}
 
     def db_for_read(self, model, **hints):
