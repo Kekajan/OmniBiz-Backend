@@ -6,6 +6,6 @@ from owner.views import (CreateOwnerView,
 
 urlpatterns = [
     path('createOwner', CreateOwnerView.as_view(), name='create owner'),
-    path('updateOwner/<str:owner_id>/', UpdateOwnerView.as_view(), name='update owner'),
+    path('updateOwner/<str:user_id>/', UpdateOwnerView.as_view(), name='update owner'),
     path('get-owner/<str:user_id>', GetOwnerView.as_view(), name='get owner'),
 ]

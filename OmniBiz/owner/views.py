@@ -20,7 +20,7 @@ class UpdateOwnerView(generics.UpdateAPIView):
     queryset = Owner.objects.all()
     serializer_class = OwnerSerializer
     permission_classes = [IsAuthenticated]
-    lookup_field = 'owner_id'
+    lookup_field = 'user_id'
 
     def get_queryset(self):
         return Owner.objects.filter(user_id=self.request.user)
