@@ -8,7 +8,7 @@ from super.serializer import SuperSerializer
 from rest_framework.response import Response
 from owner.serializer import OwnerSerializer
 from business.models import Business
-from authentication.models import User
+from authentication.models import User, HigherStaffAccess
 
 
 # Create your views here.
@@ -28,7 +28,8 @@ class GetAllOwners(generics.ListAPIView):
         for owner in owners:
             user = User.objects.get(pk=owner.user_id)
             businesses = Business.objects.filter(owner=user.user_id)
-            business_list = [{'business_id': business.business_id, 'business_name': business.business_name} for business in businesses]
+            business_list = [{'business_id': business.business_id, 'business_name': business.business_name} for business
+                             in businesses]
             owner_data = {
                 'owner_id': owner.owner_id,
                 'user_id': user.user_id,
@@ -90,5 +91,29 @@ class GetAllAccesses(generics.ListAPIView):
             return Response(accesses, status=status.HTTP_200_OK)
         except Super.DoesNotExist:
             return Response({'accesses': []}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class GetHigherStaffAccess(generics.ListAPIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        user_id = kwargs.get('user_id')
+        print(user_id)
+        if not user_id:
+            return Response({'higher_staff_access': []}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            higher_staff_accesses = HigherStaffAccess.objects.filter(user_id=user_id)
+            access_business = []
+            for higher_staff_access in higher_staff_accesses:
+                if higher_staff_access.status:
+                    access_business.append(higher_staff_access.business_id)
+                else:
+                    continue
+            return Response(access_business, status=status.HTTP_200_OK)
+        except HigherStaffAccess.DoesNotExist:
+            return Response({'higher_staff_access': []}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
