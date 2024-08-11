@@ -100,7 +100,6 @@ class GetHigherStaffAccess(generics.ListAPIView):
 
     def get(self, request, *args, **kwargs):
         user_id = kwargs.get('user_id')
-        print(user_id)
         if not user_id:
             return Response({'higher_staff_access': []}, status=status.HTTP_404_NOT_FOUND)
 
