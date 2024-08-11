@@ -1,4 +1,5 @@
 # serializers.py
+import logging
 import os
 from datetime import timedelta
 from django.utils import timezone
@@ -41,8 +42,11 @@ class BusinessSerializer(serializers.ModelSerializer):
 
             database_command = DynamicDatabaseCreationCommand()
             try:
+                logging.info("Database Creation Process started serializers")
                 result = database_command.create_and_migrate_dynamic_db(business_id=business_id)
+                logging.info("Database Creation Process finished serializers")
             except Exception as e:
+                logging.info("Database process not inintialized due to an error serializers")
                 business.delete()
                 raise serializers.ValidationError(f"Business creation failed due to database error: {str(e)}")
 
@@ -52,6 +56,8 @@ class BusinessSerializer(serializers.ModelSerializer):
             else:
                 try:
                     owner = Owner.objects.get(user_id=user.user_id)
+                    logging.info(f"owner user_id : {user.user_id}")
+                    logging.info(f"owner : {owner}")
                     owner.business_count += 1
                     owner.save()
                     try:
@@ -65,13 +71,17 @@ class BusinessSerializer(serializers.ModelSerializer):
                         }
                         result = create_cash_book_entry(cash_book_data)
                         if result.status_code == 201:
+                            logging.info("Cashbook Data successfully loaded serializers")
                             return business
                         else:
+                            logging.info("Error While creating initial entry")
                             return 'Error While creating initial entry'
                     except Exception as e:
+                        logging.info("Error while try to increase the business count")
                         raise serializers.ValidationError(f"Error creating initial entry: {str(e)}")
 
                 except Exception as e:
-                    raise serializers.ValidationError(f"Owner creation failed due to database error: {str(e)}")
+                    raise serializers.ValidationError(
+                        f"Error while increase the business count in owner table : {str(e)}")
         else:
             raise serializers.ValidationError("You are not allowed to create business.")

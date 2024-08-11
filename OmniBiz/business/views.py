@@ -59,12 +59,17 @@ class BlockBusinessView(generics.GenericAPIView):
 
         try:
             staffs = Staff.objects.using(db_name).all()
+            print(staffs)
             staff_user_id = [staff.user_id for staff in staffs]
+            print(staff_user_id)
             for staff_id in staff_user_id:
+                print(staff_id)
                 if action == 'block':
                     User.objects.filter(user_id=staff_id).update(is_active=False)
+                    Business.objects.filter(business_id=business_id).update(is_active=False)
                 elif action == 'unblock':
                     User.objects.filter(user_id=staff_id).update(is_active=True)
+                    Business.objects.filter(business_id=business_id).update(is_active=True)
                 else:
                     return Response({'message': 'Please select valid action'}, status=status.HTTP_400_BAD_REQUEST)
             return Response({'message': f'{business_id} is {action}ed'}, status=status.HTTP_200_OK)
