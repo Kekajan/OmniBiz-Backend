@@ -1,5 +1,5 @@
 from rest_framework import generics, status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from Utils.Core.permissions import IsAdmin
 from owner.models import Owner
@@ -72,3 +72,23 @@ class GetAllBusinesses(generics.ListAPIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+class GetAllAccesses(generics.ListAPIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        accesses = []
+        try:
+            staff_accesses = Super.objects.all()
+            for staff_access in staff_accesses:
+                staff_access_details = {
+                    'permission_id': staff_access.id,
+                    'permission_name': staff_access.permission,
+                    'description': staff_access.description,
+                }
+                accesses.append(staff_access_details)
+            return Response(accesses, status=status.HTTP_200_OK)
+        except Super.DoesNotExist:
+            return Response({'accesses': []}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
