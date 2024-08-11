@@ -8,7 +8,8 @@ from suppliers.models import Supplier, SupplierContract, Order
 class SupplierSerializer(serializers.ModelSerializer):
     class Meta:
         model = Supplier
-        fields = ['supplier_id', 'supplier_name', 'supplier_address', 'supplier_phone', 'supplier_email', 'supplier_website']
+        fields = ['supplier_id', 'supplier_name', 'supplier_address', 'supplier_phone', 'supplier_email',
+                  'supplier_website']
         read_only_fields = ['supplier_id']
 
 
@@ -33,6 +34,9 @@ class SupplierContractSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Supplier does not exist in the specified business database.")
 
         return supplier
+
+    def get_supplier_id(self, obj):
+        return obj.supplier_id
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -62,4 +66,3 @@ class OrderSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Supplier does not exist in the specified business database.")
 
         return supplier
-

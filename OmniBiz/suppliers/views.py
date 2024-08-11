@@ -184,13 +184,23 @@ class SupplierContractListView(generics.ListAPIView):
         business_id = kwargs.get('business_id')
         if not business_id:
             return Response({"error": "business_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
         db_name = f"{business_id}{os.getenv('DB_NAME_SECONDARY')}"
         add_database(db_name)
 
         try:
+            response_data = []
             supplier_contract_data = SupplierContract.objects.using(db_name).all()
-            serializer = self.get_serializer(supplier_contract_data, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            for contract_data in supplier_contract_data:
+                contract = {
+                    'contract_id': contract_data.contract_id,
+                    'supplier_id': contract_data.supplier_id.supplier_id,
+                    'supplier_name': contract_data.supplier_id.supplier_name,
+                    'date_contracted': contract_data.date_contracted,
+                    'contract_end_date': contract_data.contract_end_date,
+                }
+                response_data.append(contract)
+            return Response(response_data, status=status.HTTP_200_OK)
         except SupplierContract.DoesNotExist:
             return Response({"error": "Supplier contract does not exist"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
