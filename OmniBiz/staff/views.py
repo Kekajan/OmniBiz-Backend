@@ -113,3 +113,22 @@ class UpdateStaffAccessView(generics.UpdateAPIView):
         # Serialize and return the updated permissions
         response_serializer = UpdateStaffAccessSerializer(updated_permissions, many=True)
         return Response(response_serializer.data)
+
+
+class ListStaffAccess(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        user_id = kwargs.get('user_id')
+
+        if user_id is None:
+            return Response({'error': 'user_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            staff_accesses = StaffAccess.objects.filter(user_id=user_id)
+            accesses = []
+            for staff_access in staff_accesses:
+                accesses.append(staff_access.permission)
+            return Response(accesses, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
