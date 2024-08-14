@@ -37,7 +37,8 @@ class GetAllOwners(generics.ListAPIView):
                 'phone_number': owner.phone_number,
                 'business_count': owner.business_count,
                 'subscription_amount': owner.subscription_amount,
-                'businesses': business_list
+                'is_active': user.is_active,
+                'businesses': business_list,
             }
             owners_details.append(owner_data)
         return Response(owners_details, status=status.HTTP_200_OK)
