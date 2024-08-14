@@ -273,8 +273,21 @@ class ListAllOrdersView(generics.ListAPIView):
 
         try:
             orders = Order.objects.using(db_name).all().order_by('-date_ordered')
-            serializer = self.get_serializer(orders, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            order_data = []
+            for order in orders:
+                data = {
+                    'order_id': order.order_id,
+                    'date_ordered': order.date_ordered,
+                    'delivery_date': order.delivery_date,
+                    'amount_ordered': order.amount_ordered,
+                    'amount_paid': order.amount_paid,
+                    'amount_due_date': order.amount_due_date,
+                    'order_status': order.order_status,
+                    'supplier_id': order.supplier_id.supplier_id,
+                    'supplier_name': order.supplier_id.supplier_name,
+                }
+                order_data.append(data)
+            return Response(order_data, status=status.HTTP_200_OK)
         except Order.DoesNotExist:
             return Response({"error": "Order does not exist"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
