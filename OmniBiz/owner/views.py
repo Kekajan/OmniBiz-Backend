@@ -31,10 +31,20 @@ class UpdateOwnerView(generics.UpdateAPIView):
 
 class GetOwnerView(generics.RetrieveAPIView):
     queryset = Owner.objects.all()
-    serializer_class = OwnerSerializer
     permission_classes = [IsAuthenticated]
     lookup_field = 'user_id'
 
-    def get_owner_object(self):
-        user = self.request.user
-        return Owner.objects.get(user_id=user)
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        owner = self.get_object()  # Automatically fetches the owner based on user_id
+        owner_data = {
+            'owner_id': owner.owner_id,
+            'first_name': owner.first_name,
+            'last_name': owner.last_name,
+            'phone_number': owner.phone_number,
+            'business_count': owner.business_count,
+            'profit': owner.profit,
+            'subscription_amount': owner.subscription_amount,
+            'is_active': user.is_active,
+        }
+        return Response(owner_data)
