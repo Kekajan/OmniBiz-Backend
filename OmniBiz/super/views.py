@@ -64,7 +64,8 @@ class GetAllBusinesses(generics.ListAPIView):
                     'subscription_trial_ended_at': business.subscription_trial_ended_at,
                     'subscription_ended_at': business.subscription_ended_at,
                     'subscription_count': business.subscription_count,
-                    'owner': owner_details
+                    'owner': owner_details,
+                    'is_active': business.is_active,
                 }
                 business_data.append(business_details)
             return Response(business_data, status=status.HTTP_200_OK)
