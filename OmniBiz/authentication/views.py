@@ -176,9 +176,11 @@ class PasswordChangeView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         try:
             serializer = self.get_serializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response({"message": "Password has been changed successfully."})
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"message": "Password has been changed successfully."})
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 

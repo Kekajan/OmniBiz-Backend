@@ -1,3 +1,4 @@
+import logging
 import os
 import secrets
 
@@ -206,9 +207,12 @@ class PasswordChangeSerializer(serializers.Serializer):
         try:
             request = self.context.get('request')
             user = request.user
+            logging.info(user)
             if user.check_password(validated_data['old_password']):
                 password = make_password(validated_data['new_password'])
-                user.set_password(password)
+                logging.info(validated_data['new_password'])
+                logging.info(validated_data['old_password'])
+                user.password = password
                 user.save()
                 return user
             else:
