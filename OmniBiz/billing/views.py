@@ -20,6 +20,7 @@ from cash_book.views import create_cash_book_entry
 from django.http import JsonResponse
 
 from inventory.views import change_stock_quantity
+from notification.views import create_notification
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +72,8 @@ class CreateBillView(generics.CreateAPIView):
                     invoice_items = []
                     for item_data in invoice_items_data:
                         item_data['invoice'] = invoice.invoice_id
-                    invoice_item_serializer = InvoiceItemSerializers(data=invoice_items_data, many=True, context=request)
+                    invoice_item_serializer = InvoiceItemSerializers(data=invoice_items_data, many=True,
+                                                                     context=request)
                     if invoice_item_serializer.is_valid():
                         for item_data in invoice_item_serializer.validated_data:
                             invoice_item = InvoiceItem.objects.using(db_name).create(**item_data)
@@ -332,4 +334,3 @@ class ReturnItemView(generics.UpdateAPIView):
                 return Response({'Error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except InvoiceItem.DoesNotExist:
             return Response({'error': 'Invoice item does not exist'}, status=status.HTTP_400_BAD_REQUEST)
-

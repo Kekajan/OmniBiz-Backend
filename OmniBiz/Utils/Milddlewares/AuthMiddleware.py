@@ -2,9 +2,9 @@ import re
 import logging
 from urllib.parse import parse_qs
 
+from asgiref.sync import sync_to_async
 from channels.auth import AuthMiddlewareStack
 from channels.db import database_sync_to_async
-from django.conf import settings
 from django.db import close_old_connections
 from rest_framework_simplejwt.exceptions import TokenError
 
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class JWTAuthMiddleware:
-    """Middleware to authenticate user for channels"""
+    """Middleware to authenticate and authorize user for channels"""
 
     def __init__(self, app):
         """Initialize the app."""
@@ -25,7 +25,8 @@ class JWTAuthMiddleware:
         from django.contrib.auth.models import AnonymousUser
         from rest_framework_simplejwt.tokens import AccessToken
 
-        close_old_connections()
+        await sync_to_async(close_old_connections)()
+
         try:
             query_string = scope["query_string"].decode("utf8")
             query_params = parse_qs(query_string)
@@ -36,8 +37,17 @@ class JWTAuthMiddleware:
                     access_token = AccessToken(token)
                     user_id = access_token["user_id"]
                     user = await self.get_user(user_id)
+
                     if user:
-                        scope['user'] = user
+                        role = user.role
+                        path = scope["path"]
+                        paths = path.split("/")
+                        business_id = paths[len(paths) - 2]
+                        if await self.is_authorized(user, role, business_id):
+                            scope['user'] = user
+                        else:
+                            logger.error(f"User {user_id} is not authorized for business {business_id}")
+                            scope['user'] = AnonymousUser()
                     else:
                         scope['user'] = AnonymousUser()
                 except TokenError as e:
@@ -60,6 +70,29 @@ class JWTAuthMiddleware:
         except User.DoesNotExist:
             logging.info(f"User {user_id} does not exist")
             return None
+
+    @database_sync_to_async
+    def is_authorized(self, user, role, business_id):
+        from business.models import Business
+        from authentication.models import HigherStaffAccess
+
+        if role == 'owner':
+            try:
+                business = Business.objects.using('omnibiz').get(business_id=business_id, owner_id=user.user_id)
+                return business is not None
+            except Business.DoesNotExist:
+                return False
+
+        elif role == 'higher-staff':
+            return HigherStaffAccess.objects.using('omnibiz').filter(user_id=user.user_id, business_id=business_id).exists()
+
+        elif role == 'staff':
+            return user.business_id == business_id
+
+        elif role == 'admin':
+            return False  # Admin cannot access this WebSocket
+
+        return False  # Default to not authorized
 
 
 def JWTAuthMiddlewareStack(app):

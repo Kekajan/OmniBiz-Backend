@@ -12,7 +12,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'OmniBiz.settings')
 application = ProtocolTypeRouter({
     'http': get_asgi_application(),
     'websocket': AllowedHostsOriginValidator(
-        JWTAuthMiddlewareStack(  # Use your custom JWTAuthMiddlewareStack
+        JWTAuthMiddlewareStack(
             URLRouter(
                 notification.routing.websocket_urlpatterns +
                 billing.routing.websocket_urlpatterns
