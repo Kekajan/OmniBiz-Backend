@@ -82,7 +82,8 @@ INSTALLED_APPS = [
     "performance",
     "suppliers",
     "daily_revenue",
-    "cash_book"
+    "cash_book",
+    "subscription"
 ]
 
 MIDDLEWARE = [
