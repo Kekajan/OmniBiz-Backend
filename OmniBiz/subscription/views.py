@@ -7,6 +7,9 @@ from rest_framework.permissions import IsAuthenticated
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
+from business.models import Business
+from notification.models import Notification
+from notification.views import create_notification
 from subscription.models import PaymentCard, Subscription
 from subscription.serializers import CardSerializer, SubscriptionSerializer
 
@@ -91,6 +94,23 @@ class CreateSubscriptionView(generics.CreateAPIView):
         serializer = SubscriptionSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
+            try:
+                business = Business.objects.get(business_id=data['business'])
+                business.subscription_count += 1
+                business.subscription_ended_at = one_year_later
+                if not business.subscription_started_at:
+                    business.subscription_started_at = current_date
+                business.save()
+                notification = Notification.objects.create(
+                    message=f"Your subscription has been started form {current_date}. This subscription want to renew at {one_year_later}.",
+                    target='user',
+                    target_id=user.user_id,
+                )
+                create_notification(notification)
+            except Business.DoesNotExist:
+                return Response("Business Does not exist", status=status.HTTP_404_NOT_FOUND)
+            except Exception as e:
+                return Response(f"error: {e}", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
