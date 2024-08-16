@@ -13,6 +13,7 @@ class Notification(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     target = models.CharField(max_length=255, null=True, blank=True)
+    target_id = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
         return self.message
