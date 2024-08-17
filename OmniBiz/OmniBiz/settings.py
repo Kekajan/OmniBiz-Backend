@@ -3,6 +3,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from asgiref.local import Local
+from celery.schedules import crontab
 from django.db import connections
 from dotenv import load_dotenv
 
@@ -70,6 +71,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
+    'django_celery_beat',
 
     "authentication",
     "business",
@@ -151,6 +153,26 @@ CHANNEL_LAYERS = {
             'hosts': [('127.0.0.1', 6379)],
         }
     }
+}
+
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+
+CELERY_BEAT_SCHEDULE = {
+    'subscription_have_30_days': {
+        'task': 'OmniBiz.Utils.tasks.subscription_tasks.subscription_have_30_days',
+        'schedule': crontab(hour=0, minute=0),  # Runs daily at midnight
+    },
+    'subscription_have_7_days': {
+        'task': 'OmniBiz.Utils.tasks.subscription_tasks.subscription_have_7_days',
+        'schedule': crontab(hour=0, minute=0),  # Runs daily at midnight
+    },
+    'subscription_have_1_day': {
+        'task': 'OmniBiz.Utils.tasks.subscription_tasks.subscription_have_1_day',
+        'schedule': crontab(hour=0, minute=0),  # Runs daily at midnight
+    },
 }
 
 # Password validation
