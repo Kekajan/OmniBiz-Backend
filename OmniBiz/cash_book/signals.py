@@ -24,7 +24,6 @@ def notify_graph_update(sender, instance, **kwargs):
 
     # Get the owner_id from the business
     owner_id = business.owner_id
-    logger.info(f"Owner ID: {owner_id}, Timezone-aware: {timezone.is_aware(instance.created_at)}")
 
     # Aggregate the business data for the owner
     graph_data = aggregate_business_data(owner_id)
