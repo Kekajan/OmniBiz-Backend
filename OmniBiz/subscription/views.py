@@ -6,8 +6,9 @@ from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
-from datetime import datetime
+from django.utils import timezone
 from dateutil.relativedelta import relativedelta
+
 
 from business.models import Business
 from cash_book.views import create_cash_book_entry
@@ -83,7 +84,9 @@ class CreateSubscriptionView(generics.CreateAPIView):
     def post(self, request, *args, **kwargs):
         user = request.user
         data = request.data
-        current_date = datetime.now()
+
+        # Use timezone-aware current date
+        current_date = timezone.now()
 
         # Adding one year
         one_year_later = current_date + relativedelta(years=1)
@@ -109,13 +112,13 @@ class CreateSubscriptionView(generics.CreateAPIView):
                         'business_id': business.business_id,
                         'transaction_amount': data['amount'],
                         'transaction_type': 'expense',
-                        'description': f'Get Subscription for  Business {business.business_name} business_id {business.business_id}',
+                        'description': f'Get Subscription for Business {business.business_name} business_id {business.business_id}',
                         'created_by': str(user.user_id),
                     }
                     cash_book_entry_status = create_cash_book_entry(cash_book_data)
                     if cash_book_entry_status.status_code == 201:
                         notification = Notification.objects.create(
-                            message=f"Your subscription has been started form {current_date}. This subscription want to renew at {one_year_later}.",
+                            message=f"Your subscription has been started from {current_date}. This subscription will renew at {one_year_later}.",
                             target='user',
                             target_id=user.user_id,
                         )
@@ -124,7 +127,7 @@ class CreateSubscriptionView(generics.CreateAPIView):
                     else:
                         return Response({"error While cashbook entry with status code": str(cash_book_entry_status)}, )
                 except Exception as e:
-                    return Response({"error While cashbook entry with status code": str(e)},
+                    return Response({"error While cashbook entry with status code 2": str(e)},
                                     status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             except Business.DoesNotExist:
                 return Response("Business Does not exist", status=status.HTTP_404_NOT_FOUND)

@@ -17,22 +17,25 @@ def create_cash_book_entry(data):
 
     # Fetch the last entry if it exists
     last_entry = CashBook.objects.using(db_name).last()
-    last_balance = last_entry.balance if last_entry else 0.0
+    last_balance = last_entry.balance if last_entry else 0.0  # Ensure last_balance is a float
 
     transaction_amount = data.get('transaction_amount')
-    transaction_type = data.get('transaction_type')
 
-    # Ensure transaction_amount is valid
+    # Ensure transaction_amount is valid and a float
     try:
         transaction_amount = float(transaction_amount)
     except (TypeError, ValueError):
         raise ValidationError("Invalid transaction amount")
 
+    transaction_type = data.get('transaction_type')
+
+    # Calculate the new balance based on the transaction type
     if transaction_type == 'expense':
         new_balance = last_balance - transaction_amount
     else:
         new_balance = last_balance + transaction_amount
 
+    # Create a new CashBook entry
     cash_book_entry = CashBook(
         transaction_time=datetime.now(),
         transaction_type=transaction_type,
@@ -42,11 +45,13 @@ def create_cash_book_entry(data):
         created_by=str(data.get('created_by')),
     )
 
+    # Validate and save the new CashBook entry
     serializer = CashBookSerializer(data=cash_book_entry.__dict__)
     if serializer.is_valid():
         cash_book_entry.save(using=db_name)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    raise ValidationError(serializer.errors)
+    else:
+        raise ValidationError(serializer.errors)
 
 
 class CashBookView(generics.ListAPIView):

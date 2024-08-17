@@ -5,6 +5,7 @@ from django.core.asgi import get_asgi_application
 
 import billing.routing
 import notification.routing
+import owner_dashboard.routing
 from Utils.Milddlewares.AuthMiddleware import JWTAuthMiddlewareStack
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'OmniBiz.settings')
@@ -15,7 +16,8 @@ application = ProtocolTypeRouter({
         JWTAuthMiddlewareStack(
             URLRouter(
                 notification.routing.websocket_urlpatterns +
-                billing.routing.websocket_urlpatterns
+                billing.routing.websocket_urlpatterns +
+                owner_dashboard.routing.websocket_urlpatterns
             )
         )
     ),
