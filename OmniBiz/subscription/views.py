@@ -1,3 +1,5 @@
+import os
+
 from django.shortcuts import render
 from rest_framework import generics, status
 from rest_framework.exceptions import NotFound, PermissionDenied
@@ -8,6 +10,7 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
 from business.models import Business
+from cash_book.views import create_cash_book_entry
 from notification.models import Notification
 from notification.views import create_notification
 from subscription.models import PaymentCard, Subscription
@@ -101,17 +104,32 @@ class CreateSubscriptionView(generics.CreateAPIView):
                 if not business.subscription_started_at:
                     business.subscription_started_at = current_date
                 business.save()
-                notification = Notification.objects.create(
-                    message=f"Your subscription has been started form {current_date}. This subscription want to renew at {one_year_later}.",
-                    target='user',
-                    target_id=user.user_id,
-                )
-                create_notification(notification)
+                try:
+                    cash_book_data = {
+                        'business_id': business.business_id,
+                        'transaction_amount': data['amount'],
+                        'transaction_type': 'expense',
+                        'description': f'Get Subscription for  Business {business.business_name} business_id {business.business_id}',
+                        'created_by': str(user.user_id),
+                    }
+                    cash_book_entry_status = create_cash_book_entry(cash_book_data)
+                    if cash_book_entry_status.status_code == 201:
+                        notification = Notification.objects.create(
+                            message=f"Your subscription has been started form {current_date}. This subscription want to renew at {one_year_later}.",
+                            target='user',
+                            target_id=user.user_id,
+                        )
+                        create_notification(notification)
+                        return Response(serializer.data, status=status.HTTP_200_OK)
+                    else:
+                        return Response({"error While cashbook entry with status code": str(cash_book_entry_status)}, )
+                except Exception as e:
+                    return Response({"error While cashbook entry with status code": str(e)},
+                                    status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             except Business.DoesNotExist:
                 return Response("Business Does not exist", status=status.HTTP_404_NOT_FOUND)
             except Exception as e:
                 return Response(f"error: {e}", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
