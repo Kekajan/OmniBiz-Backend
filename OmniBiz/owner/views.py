@@ -48,3 +48,18 @@ class GetOwnerView(generics.RetrieveAPIView):
             'is_active': user.is_active,
         }
         return Response(owner_data)
+
+
+class OwnerActionView(generics.CreateAPIView):
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        request_data = request.data
+
+        if request_data.get('block'):
+            user.is_active = False
+            user.save()
+            return Response({'owner is blocked'}, status=status.HTTP_200_OK)
+        elif request_data.get('unblock'):
+            user.is_active = True
+            user.save()
+            return Response({'owner is unblocked'}, status=status.HTTP_200_OK)
