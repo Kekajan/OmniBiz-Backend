@@ -124,12 +124,20 @@ class ListBillView(generics.ListAPIView):
         user = request.user
         if not business_id:
             return Response({'error': 'business_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
         db_name = f'{business_id}{os.getenv("DB_NAME_SECONDARY")}'
-        add_database(db_name)
-        data = []
 
         try:
+            add_database(db_name)
+        except Exception as e:
+            return Response({'error': f'Error adding database: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        data = []
+        try:
             invoices = Invoice.objects.using(db_name).all()
+            if not invoices.exists():
+                return Response({'error': 'No invoices found for this business'}, status=status.HTTP_404_NOT_FOUND)
+
             for invoice in invoices:
                 invoice_data = {
                     'invoice_id': invoice.invoice_id,
@@ -137,25 +145,30 @@ class ListBillView(generics.ListAPIView):
                     'amount': invoice.amount,
                     'created_by': invoice.created_by,
                     'invoice_status': invoice.invoice_status,
-                    'customer': invoice.customer.name,
+                    'customer': invoice.customer.name if invoice.customer else None,
                     'items': []
                 }
+
                 invoice_items = InvoiceItem.objects.using(db_name).filter(invoice_id=invoice.invoice_id)
                 for invoice_item in invoice_items:
+                    if invoice_item.return_status:
+                        continue
                     item_data = {
-                        'category': invoice_item.category.name,
-                        'item': invoice_item.item.name,
+                        'sales_id': invoice_item.sales_id,
+                        'category': invoice_item.category.name if invoice_item.category else None,
+                        'item': invoice_item.item.name if invoice_item.item else None,
                         'price': invoice_item.price,
                         'quantity': invoice_item.quantity,
                     }
                     invoice_data['items'].append(item_data)
+
                 data.append(invoice_data)
             return JsonResponse(data, safe=False)
 
         except Invoice.DoesNotExist:
-            return Response({'error': 'Invoice does not exist'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Invoice does not exist'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'error': f'Internal server error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ListBillViewByCreator(generics.ListAPIView):
@@ -317,19 +330,21 @@ class ReturnItemView(generics.UpdateAPIView):
                 price = invoice_item.price
                 transaction_amount = price * quantity
 
-                cash_book_data = {
+                cash_book_data_for_expense = {
                     'business_id': business_id,
                     'transaction_amount': transaction_amount,
                     'transaction_type': 'expense',
                     'description': f'Return item id {invoice_item.sales_id}',
                     'created_by': str(user.user_id),
                 }
-                result = create_cash_book_entry(cash_book_data)
 
-                if result.status_code == 201:
+                result_expense = create_cash_book_entry(cash_book_data_for_expense)
+
+                if result_expense.status_code == 201:
                     return Response({'Item Returned': invoice_id}, status=status.HTTP_201_CREATED)
                 else:
-                    return Response({'Error': result.text}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                    return Response({'Error': result_expense},
+                                    status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             except Exception as e:
                 return Response({'Error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except InvoiceItem.DoesNotExist:
