@@ -54,13 +54,13 @@ def notify_graph_update_staff(sender, instance, **kwargs):
     # Assuming that user_id is a field in HigherStaffAccess, and you want to notify all staff
     for access in staff_access:
         user_id = access.user_id
-        graph_data = aggregate_business_data(user_id)
+        graph_data_for_higher_staff = aggregate_business_data(user_id)
 
         channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(
             f'higher_staff_{user_id}',
             {
                 'type': 'graph_update_staff',
-                'graph_data': graph_data,
+                'graph_data': graph_data_for_higher_staff,
             }
         )
