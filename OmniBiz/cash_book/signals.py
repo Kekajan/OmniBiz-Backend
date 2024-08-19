@@ -6,6 +6,7 @@ import logging
 from django.utils import timezone
 
 from Utils.Common.business_data_handling import aggregate_business_data
+from authentication.models import HigherStaffAccess
 from cash_book.models import CashBook
 from business.models import Business  # Import your Business model
 
@@ -37,3 +38,29 @@ def notify_graph_update(sender, instance, **kwargs):
             'graph_data': graph_data,
         }
     )
+
+
+@receiver(post_save, sender=CashBook)
+def notify_graph_update_staff(sender, instance, **kwargs):
+    db_name = instance._state.db
+    business_id = db_name.split('_')[0]
+
+    staff_access = HigherStaffAccess.objects.using('default').filter(business_id=business_id)
+
+    # Stop the function if staff_access is empty
+    if not staff_access.exists():
+        return
+
+    # Assuming that user_id is a field in HigherStaffAccess, and you want to notify all staff
+    for access in staff_access:
+        user_id = access.user_id
+        graph_data = aggregate_business_data(user_id)
+
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f'higher_staff_{user_id}',
+            {
+                'type': 'graph_update_staff',
+                'graph_data': graph_data,
+            }
+        )
