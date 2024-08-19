@@ -43,23 +43,23 @@ class GetAllNotificationView(generics.ListAPIView):
         user_id = user.user_id
 
         if not business_id:
-            return Response({'Business id not found'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Business id not found'}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            business_notifications = Notification.objects.filter(target_id=business_id)
-            user_notifications = Notification.objects.filter(target_id=user_id)
-        except Notification.DoesNotExist:
-            business_notifications = None
-            user_notifications = None
-            return Response({'notification not found'}, status=status.HTTP_400_BAD_REQUEST)
+        # Fetch business and user notifications
+        business_notifications = Notification.objects.filter(target_id=business_id)
+        user_notifications = Notification.objects.filter(target_id=user_id)
 
+        # Combine both notifications
         combined_notifications = list(business_notifications) + list(user_notifications)
 
+        # Return an empty list if no notifications are found
         if not combined_notifications:
-            return Response({'No notifications found'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response([], status=status.HTTP_200_OK)
 
+        # Sort notifications by creation date
         combined_notifications.sort(key=lambda notification: notification.created_at, reverse=True)
 
+        # Serialize and return notifications
         serializer = NotificationSerializer(combined_notifications, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
