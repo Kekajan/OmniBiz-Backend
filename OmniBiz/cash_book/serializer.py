@@ -11,6 +11,7 @@ class CashBookSerializer(serializers.ModelSerializer):
             'transaction_amount',
             'balance',
             'description',
-            'created_by'
+            'created_by',
+            'transaction_time'
         ]
 
